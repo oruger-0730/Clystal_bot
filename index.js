@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
-const { clientId, token } = require('./config.json');  // guildId を使わないため config.json から取り出さなくても良い
+const { clientId, token, guildId } = require('./config.json');  // guildId を使わないため config.json から取り出さなくても良い
 const fs = require('fs');
 
 // discord.jsのクライアントインスタンスを作成
