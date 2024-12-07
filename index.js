@@ -1,69 +1,63 @@
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v9');
-const { clientId, token, guildId } = require('./config.json');  // guildId を使わないため config.json から取り出さなくても良い
+const { Routes } = require('discord-api-types/v10'); // API バージョンを v10 に変更
+const { clientId, token } = require('./config.json');
 const fs = require('fs');
 
-// discord.jsのクライアントインスタンスを作成
+// Discord.js クライアントを作成
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// RESTクライアントのインスタンスを作成
-const rest = new REST({ version: '10' }).setToken(token);
-
-// コマンドを格納するためのコレクションを作成
+// コマンドを格納するコレクションを作成
 client.commands = new Collection();
 
-// コマンドファイルを動的に読み込む
+// コマンドファイルを動的に読み込み
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-
 for (const file of commandFiles) {
   const command = require(`./commands/${file}`);
   client.commands.set(command.data.name, command);
 }
 
-(async () => {
+// ボットの準備が完了したら実行
+client.once('ready', async () => {
+  console.log('ボットが準備完了しました!');
+
+  // REST クライアントの初期化
+  const rest = new REST({ version: '10' }).setToken(token);
+
   try {
-    console.log('開始: コマンドを登録中');
+    console.log('開始: グローバルコマンドを登録中...');
 
-    // ボットが参加している全サーバーにコマンドを登録
-    const guilds = client.guilds.cache;
+    // コマンドデータを取得
+    const commands = client.commands.map(command => command.data.toJSON());
 
-    // 全サーバーに対してコマンド登録
-    for (const [guildId] of guilds) {
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
-        body: commandFiles.map(file => require(`./commands/${file}`).data),
-      });
-      console.log(`サーバー ${guildId} にコマンドが登録されました`);
-    }
+    // グローバルコマンドを登録
+    await rest.put(Routes.applicationCommands(clientId), { body: commands });
 
-    console.log('成功: コマンドが全サーバーに登録されました');
+    console.log('成功: グローバルコマンドが登録されました');
   } catch (error) {
     console.error('エラー: コマンド登録中に問題が発生しました', error);
   }
-})();
-
-// ボットが準備できたらメッセージを送信
-client.once('ready', () => {
-  console.log('ボットが準備完了しました!');
 });
 
 // コマンドの実行処理
-client.on('interactionCreate', async (interaction) => {
+client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
-  const { commandName } = interaction;
+  const command = client.commands.get(interaction.commandName);
+  if (!command) {
+    return interaction.reply({ content: '不明なコマンドです。', ephemeral: true });
+  }
 
-  // コマンドを実行
-  if (client.commands.has(commandName)) {
-    const command = client.commands.get(commandName);
-    try {
-      await command.execute(interaction);
-    } catch (error) {
-      console.error('エラー: コマンド実行中に問題が発生しました', error);
-      await interaction.reply('コマンドの実行中にエラーが発生しました');
-    }
+  try {
+    await command.execute(interaction);
+  } catch (error) {
+    console.error('エラー: コマンド実行中に問題が発生しました', error);
+    await interaction.reply({
+      content: 'コマンドの実行中にエラーが発生しました。もう一度お試しください。',
+      ephemeral: true,
+    });
   }
 });
 
-// ボットをログインさせる
+// ボットを Discord にログイン
 client.login(token);
