@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 // admin.jsonのパス
-const adminFilePath = path.join(__dirname, 'admin.json');
+const adminFilePath = path.join(__dirname, '../json/admin.json');
 
 module.exports = {
   data: new SlashCommandBuilder()
