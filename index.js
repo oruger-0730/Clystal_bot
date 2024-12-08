@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection,ActivityType } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10'); // API バージョンを v10 に変更
 const { clientId, token } = require('./config.json');
@@ -20,6 +20,36 @@ for (const file of commandFiles) {
 // ボットの準備が完了したら実行
 client.once('ready', async () => {
   console.log('ボットが準備完了しました!');
+
+  client.user.setStatus("online");
+
+  let stats = 0;
+  setInterval(async()=>{
+    if(stats === 0){
+      client.user.setActivity(`/help | ping:${client.ws.ping}ms`,{
+        type: ActivityType.Playing
+      });
+
+      stats = 1;
+    }else if(stats === 1){
+      const updateActivity = () => {
+      const serverCount = client.guilds.cache.size;
+      let totalMembers = 0;
+
+    client.guilds.cache.forEach(guild => {
+      totalMembers += guild.memberCount;
+    });
+      client.user.setActivity(`${serverCount} server | ${totalMembers} user`,{
+        type: ActivityType.Playing
+      });
+      };
+      updateActivity();
+
+      // 10分ごとに更新
+      setInterval(updateActivity, 10 * 60 * 1000);
+      stats = 0;
+    }
+  },5000);
 
   // REST クライアントの初期化
   const rest = new REST({ version: '10' }).setToken(token);
