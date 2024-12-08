@@ -2,8 +2,9 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const fs = require('fs');
 const path = require('path');
 
-// admin.jsonのパス
+// admin.jsonとblacklist.jsonのパス
 const adminFilePath = path.join(__dirname, '../json/admin.json');
+const blacklistFilePath = path.join(__dirname, '../json/blacklist.json');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -44,14 +45,32 @@ module.exports = {
             .setRequired(true)
         )
     )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('blacklist')
+        .setDescription('ユーザーまたはサーバーをブラックリストに登録します')
+        .addStringOption(option =>
+          option.setName('type')
+            .setDescription('ブラックリストのタイプ (user または server)')
+            .setRequired(true)
+            .addChoices(
+              { name: 'ユーザー', value: 'user' },
+              { name: 'サーバー', value: 'server' }
+            )
+        )
+        .addStringOption(option =>
+          option.setName('id')
+            .setDescription('ユーザーIDまたはサーバーID')
+            .setRequired(true)
+        )
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-  
+
   async execute(interaction) {
     const subcommand = interaction.options.getSubcommand();
     const member = interaction.member;
 
     try {
-      // admin.jsonから管理者リストを読み込む
       const adminData = JSON.parse(fs.readFileSync(adminFilePath, 'utf-8'));
 
       // 実行者が管理者かどうか確認
@@ -63,10 +82,12 @@ module.exports = {
         return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       }
 
+      // ブラックリストデータを読み込む
+      const blacklistData = JSON.parse(fs.readFileSync(blacklistFilePath, 'utf-8'));
+
       switch (subcommand) {
         case 'server':
-          // ボットが参加中のサーバーを表示
-          const guilds = interaction.client.guilds.cache.map(guild => guild.name).join('\n') || 'ボットは参加していません。';
+          const guilds = interaction.client.guilds.cache.map(guild => `**${guild.name}** (ID: ${guild.id})`).join('\n') || 'ボットは参加していません。';
           const serverEmbed = new EmbedBuilder()
             .setColor('Blue')
             .setTitle('参加中のサーバー一覧')
@@ -75,7 +96,6 @@ module.exports = {
           break;
 
         case 'leave':
-          // サーバーIDを取得して退出
           const serverId = interaction.options.getString('server_id');
           const guild = interaction.client.guilds.cache.get(serverId);
 
@@ -96,7 +116,6 @@ module.exports = {
           break;
 
         case 'invite':
-          // 招待リンクを生成
           const inviteServerId = interaction.options.getString('server_id');
           const inviteGuild = interaction.client.guilds.cache.get(inviteServerId);
 
@@ -117,10 +136,7 @@ module.exports = {
           break;
 
         case 'member':
-          // 管理者の追加
           const user = interaction.options.getUser('user');
-
-          // すでに管理者として登録されているか確認
           if (adminData.admins.includes(user.id)) {
             const errorEmbed = new EmbedBuilder()
               .setColor('Red')
@@ -129,7 +145,6 @@ module.exports = {
             return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
           }
 
-          // 新しい管理者を追加
           adminData.admins.push(user.id);
           fs.writeFileSync(adminFilePath, JSON.stringify(adminData, null, 2));
 
@@ -138,6 +153,30 @@ module.exports = {
             .setTitle('管理者追加成功')
             .setDescription(`${user.tag}を管理者として追加しました。`);
           await interaction.reply({ embeds: [successEmbed] });
+          break;
+
+        case 'blacklist':
+          const type = interaction.options.getString('type');
+          const id = interaction.options.getString('id');
+
+          // 既にブラックリストに登録されているか確認
+          if (blacklistData[type + 's'].includes(id)) {
+            const errorEmbed = new EmbedBuilder()
+              .setColor('Red')
+              .setTitle('エラー')
+              .setDescription(`この${type === 'user' ? 'ユーザー' : 'サーバー'}は既にブラックリストに登録されています。`);
+            return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+          }
+
+          // ブラックリストに追加
+          blacklistData[type + 's'].push(id);
+          fs.writeFileSync(blacklistFilePath, JSON.stringify(blacklistData, null, 2));
+
+          const successBlacklistEmbed = new EmbedBuilder()
+            .setColor('Green')
+            .setTitle('ブラックリスト登録成功')
+            .setDescription(`指定された${type === 'user' ? 'ユーザー' : 'サーバー'}をブラックリストに登録しました。`);
+          await interaction.reply({ embeds: [successBlacklistEmbed] });
           break;
 
         default:

@@ -1,66 +1,57 @@
-const { Client, GatewayIntentBits, Collection,ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, ActivityType } = require('discord.js');
 const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v10'); // API バージョンを v10 に変更
-const { clientId, token } = require('./config.json');
+const { Routes } = require('discord-api-types/v10');
+const { clientId, token } = require('./json/config.json');
 const fs = require('fs');
 
-// Discord.js クライアントを作成
+// Discord.js クライアント作成
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-// コマンドを格納するコレクションを作成
 client.commands = new Collection();
 
-// コマンドファイルを動的に読み込み
+// コマンドファイルの読み込み
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
   const command = require(`./commands/${file}`);
   client.commands.set(command.data.name, command);
 }
 
-// ボットの準備が完了したら実行
-client.once('ready', async () => {
-  console.log('ボットが準備完了しました!');
+// ブラックリストの読み込み
+const blacklistPath = './json/blacklist.json';
+let blacklist = JSON.parse(fs.readFileSync(blacklistPath, 'utf-8'));
 
-  client.user.setStatus("online");
+// ボットが準備完了したときの処理
+client.once('ready', async () => {
+  console.log('ボットが準備完了しました！');
+
+  client.user.setStatus('online');
 
   let stats = 0;
-  setInterval(async()=>{
-    if(stats === 0){
-      client.user.setActivity(`/help | ping:${client.ws.ping}ms`,{
-        type: ActivityType.Playing
+  setInterval(async () => {
+    if (stats === 0) {
+      client.user.setActivity(`/help | ping: ${client.ws.ping}ms`, {
+        type: ActivityType.Playing,
       });
-
       stats = 1;
-    }else if(stats === 1){
-      const updateActivity = () => {
+    } else {
       const serverCount = client.guilds.cache.size;
-      let totalMembers = 0;
-
-    client.guilds.cache.forEach(guild => {
-      totalMembers += guild.memberCount;
-    });
-      client.user.setActivity(`${serverCount} server | ${totalMembers} user`,{
-        type: ActivityType.Playing
+      const totalMembers = client.guilds.cache.reduce(
+        (count, guild) => count + guild.memberCount,
+        0
+      );
+      client.user.setActivity(`${serverCount} servers | ${totalMembers} users`, {
+        type: ActivityType.Playing,
       });
-      };
-      updateActivity();
-
-      // 10分ごとに更新
-      setInterval(updateActivity, 10 * 60 * 1000);
       stats = 0;
     }
-  },5000);
+  }, 5000);
 
-  // REST クライアントの初期化
+  // コマンドの登録処理
   const rest = new REST({ version: '10' }).setToken(token);
 
   try {
     console.log('開始: グローバルコマンドを登録中...');
 
-    // コマンドデータを取得
     const commands = client.commands.map(command => command.data.toJSON());
-
-    // グローバルコマンドを登録
     await rest.put(Routes.applicationCommands(clientId), { body: commands });
 
     console.log('成功: グローバルコマンドが登録されました');
@@ -69,9 +60,29 @@ client.once('ready', async () => {
   }
 });
 
-// コマンドの実行処理
+const reportCommand = require('./commands/report.js');
+reportCommand.client = client;
+
+// コマンド実行時の処理
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
+
+  // ブラックリストチェック
+  if (blacklist.users.includes(interaction.user.id)) {
+    await interaction.reply({
+      content: 'あなたはこのボットの使用を禁止されています。もしサポートが必要な場合サポートサーバーにお越しください。',
+      ephemeral: true,
+    });
+    return; // ここで処理を終了
+  }
+
+  if (blacklist.servers.includes(interaction.guildId)) {
+    await interaction.reply({
+      content: 'このサーバーはこのボットの使用を禁止されています。サーバーの管理者はもしサポートが必要な場合サポートサーバーにお越しください。',
+      ephemeral: true,
+    });
+    return; // ここで処理を終了
+  }
 
   const command = client.commands.get(interaction.commandName);
   if (!command) {
@@ -81,7 +92,7 @@ client.on('interactionCreate', async interaction => {
   try {
     await command.execute(interaction);
   } catch (error) {
-    console.error('エラー: コマンド実行中に問題が発生しました', error);
+    console.error(`エラー: コマンド「${interaction.commandName}」の実行中に問題が発生しました`, error);
     await interaction.reply({
       content: 'コマンドの実行中にエラーが発生しました。もう一度お試しください。',
       ephemeral: true,
@@ -91,3 +102,4 @@ client.on('interactionCreate', async interaction => {
 
 // ボットを Discord にログイン
 client.login(token);
+
