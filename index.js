@@ -60,9 +60,6 @@ client.once('ready', async () => {
   }
 });
 
-const reportCommand = require('./commands/report.js');
-reportCommand.client = client;
-
 // コマンド実行時の処理
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
