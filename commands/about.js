@@ -12,7 +12,7 @@ module.exports = {
         .setDescription('このボットの詳細情報をご確認ください。')
         .addFields(
           { name: '名前', value: 'Clystal Bot', inline: true },
-          { name: 'バージョン', value: '1.2.2', inline: true },
+          { name: 'バージョン', value: '1.1.0', inline: true },
           { name: '作者', value: 'Oruger', inline: true },
           { name: 'GitHub リポジトリ', value: '[リポジトリはこちら](https://github.com/oruger-0730/Clystal_bot)', inline: false },
           { name: 'サポート', value: '[サポートサーバーに参加](https://discord.gg/4Zd8NkwKVe)', inline: false },

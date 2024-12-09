@@ -19,6 +19,17 @@ for (const file of commandFiles) {
 const blacklistPath = './json/blacklist.json';
 let blacklist = JSON.parse(fs.readFileSync(blacklistPath, 'utf-8'));
 
+const auth = require('./commands/auth');
+
+client.on('interactionCreate', async interaction => {
+    try {
+        await auth.handleInteraction(interaction);
+    } catch (error) {
+        console.error(error);
+    }
+});
+
+
 // ボットが準備完了したときの処理
 client.once('ready', async () => {
   console.log('ボットが準備完了しました！');
@@ -84,6 +95,22 @@ client.on('interactionCreate', async interaction => {
   const command = client.commands.get(interaction.commandName);
   if (!command) {
     return interaction.reply({ content: '不明なコマンドです。', ephemeral: true });
+  }
+
+  for (const file of commandFiles) {
+    const commandPath = `./commands/${file}`;
+    try {
+      const command = require(commandPath);
+  
+      if (!command.data || !command.data.name || typeof command.execute !== 'function') {
+        console.error(`コマンドファイル「${file}」は正しい形式ではありません。スキップします。`);
+        continue;
+      }
+  
+      client.commands.set(command.data.name, command);
+    } catch (error) {
+      console.error(`コマンドファイル「${file}」の読み込み中にエラーが発生しました:`, error);
+    }
   }
 
   try {
