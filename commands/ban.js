@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, PermissionsBitField } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -17,6 +17,13 @@ module.exports = {
     const targetUser = interaction.options.getUser('target');
     const reason = interaction.options.getString('reason') || '理由なし';
     
+    if (!interaction.guild.members.cache.get(interaction.client.user.id).permissions.has(PermissionsBitField.Flags.BanMembers)) {
+      const errorEmbed = new EmbedBuilder()
+          .setColor('Red')  // エラー時は赤
+          .setTitle('権限エラー')
+          .setDescription('Botに以下の権限がありません。```ロールを管理```');
+      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    }
     // BAN権限のチェック
     if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
       const noPermissionEmbed = new EmbedBuilder()

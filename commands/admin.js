@@ -64,6 +64,16 @@ module.exports = {
             .setRequired(true)
         )
     )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('reload')
+        .setDescription('指定したコマンドをリロードします')
+        .addStringOption(option =>
+          option.setName('command_name')
+            .setDescription('リロードするコマンドの名前')
+            .setRequired(true)
+        )
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
@@ -82,11 +92,9 @@ module.exports = {
         return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       }
 
-      // ブラックリストデータを読み込む
-      const blacklistData = JSON.parse(fs.readFileSync(blacklistFilePath, 'utf-8'));
-
       switch (subcommand) {
         case 'server':
+          // サーバー表示処理
           const guilds = interaction.client.guilds.cache.map(guild => `**${guild.name}** (ID: ${guild.id})`).join('\n') || 'ボットは参加していません。';
           const serverEmbed = new EmbedBuilder()
             .setColor('Blue')
@@ -96,6 +104,7 @@ module.exports = {
           break;
 
         case 'leave':
+          // サーバー退出処理
           const serverId = interaction.options.getString('server_id');
           const guild = interaction.client.guilds.cache.get(serverId);
 
@@ -115,74 +124,44 @@ module.exports = {
           await interaction.reply({ embeds: [successLeaveEmbed] });
           break;
 
-        case 'invite':
-          const inviteServerId = interaction.options.getString('server_id');
-          const inviteGuild = interaction.client.guilds.cache.get(inviteServerId);
+        case 'reload':
+          // コマンドリロード処理
+          const commandName = interaction.options.getString('command_name');
+          const commandPath = path.join(__dirname, `${commandName}.js`);
 
-          if (!inviteGuild) {
+          if (!fs.existsSync(commandPath)) {
             const errorEmbed = new EmbedBuilder()
               .setColor('Red')
               .setTitle('エラー')
-              .setDescription('指定されたサーバーが見つかりません。');
+              .setDescription(`コマンド "${commandName}" が見つかりません。`);
             return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
           }
 
-          const invite = await inviteGuild.channels.cache.filter(c => c.type === 0).first().createInvite({ unique: true });
-          const inviteEmbed = new EmbedBuilder()
-            .setColor('Blue')
-            .setTitle('サーバー招待リンク')
-            .setDescription(`こちらが招待リンクです: [${invite.url}]`);
-          await interaction.reply({ embeds: [inviteEmbed], ephemeral: true });
-          break;
+          // コマンドのキャッシュをクリア
+          delete require.cache[require.resolve(commandPath)];
 
-        case 'member':
-          const user = interaction.options.getUser('user');
-          if (adminData.admins.includes(user.id)) {
+          try {
+            const newCommand = require(commandPath);
+            interaction.client.commands.set(newCommand.data.name, newCommand);
+
+            const successReloadEmbed = new EmbedBuilder()
+              .setColor('Green')
+              .setTitle('コマンドリロード成功')
+              .setDescription(`コマンド "${commandName}" を正常にリロードしました。`);
+            await interaction.reply({ embeds: [successReloadEmbed] });
+          } catch (error) {
+            console.error(error);
             const errorEmbed = new EmbedBuilder()
               .setColor('Red')
-              .setTitle('エラー')
-              .setDescription(`${user.tag}は既に管理者です。`);
-            return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+              .setTitle('リロードエラー')
+              .setDescription(`コマンド "${commandName}" のリロード中にエラーが発生しました。`);
+            await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
           }
-
-          adminData.admins.push(user.id);
-          fs.writeFileSync(adminFilePath, JSON.stringify(adminData, null, 2));
-
-          const successEmbed = new EmbedBuilder()
-            .setColor('Green')
-            .setTitle('管理者追加成功')
-            .setDescription(`${user.tag}を管理者として追加しました。`);
-          await interaction.reply({ embeds: [successEmbed] });
-          break;
-
-        case 'blacklist':
-          const type = interaction.options.getString('type');
-          const id = interaction.options.getString('id');
-
-          // 既にブラックリストに登録されているか確認
-          if (blacklistData[type + 's'].includes(id)) {
-            const errorEmbed = new EmbedBuilder()
-              .setColor('Red')
-              .setTitle('エラー')
-              .setDescription(`この${type === 'user' ? 'ユーザー' : 'サーバー'}は既にブラックリストに登録されています。`);
-            return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
-          }
-
-          // ブラックリストに追加
-          blacklistData[type + 's'].push(id);
-          fs.writeFileSync(blacklistFilePath, JSON.stringify(blacklistData, null, 2));
-
-          const successBlacklistEmbed = new EmbedBuilder()
-            .setColor('Green')
-            .setTitle('ブラックリスト登録成功')
-            .setDescription(`指定された${type === 'user' ? 'ユーザー' : 'サーバー'}をブラックリストに登録しました。`);
-          await interaction.reply({ embeds: [successBlacklistEmbed] });
           break;
 
         default:
           break;
       }
-
     } catch (error) {
       console.error('エラー:', error);
 

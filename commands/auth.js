@@ -16,6 +16,7 @@ const path = require('path');
 // auth.json のパス
 const authFilePath = path.resolve(__dirname, '../json/auth.json');
 
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('auth')
