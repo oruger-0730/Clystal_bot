@@ -124,40 +124,117 @@ module.exports = {
           await interaction.reply({ embeds: [successLeaveEmbed] });
           break;
 
-        case 'reload':
-          // コマンドリロード処理
-          const commandName = interaction.options.getString('command_name');
-          const commandPath = path.join(__dirname, `${commandName}.js`);
-
-          if (!fs.existsSync(commandPath)) {
+        case 'blacklist':
+          // ブラックリストに登録する処理
+          const type = interaction.options.getString('type'); // user または server
+          const id = interaction.options.getString('id');
+          
+          try {
+            // blacklist.jsonの読み込み
+            const blacklistData = JSON.parse(fs.readFileSync(blacklistFilePath, 'utf-8'));
+          
+            // ブラックリストにIDを追加
+            if (type === 'user') {
+              if (!blacklistData.bannedUsers.includes(id)) {
+                blacklistData.bannedUsers.push(id);
+              } else {
+                const alreadyExistsEmbed = new EmbedBuilder()
+                  .setColor('Red')
+                  .setTitle('エラー')
+                  .setDescription(`指定されたユーザーID \`${id}\` は既にブラックリストに登録されています。`);
+                return interaction.reply({ embeds: [alreadyExistsEmbed], ephemeral: true });
+              }
+            } else if (type === 'server') {
+              if (!blacklistData.bannedServers.includes(id)) {
+                blacklistData.bannedServers.push(id);
+              } else {
+                const alreadyExistsEmbed = new EmbedBuilder()
+                  .setColor('Red')
+                  .setTitle('エラー')
+                  .setDescription(`指定されたサーバーID \`${id}\` は既にブラックリストに登録されています。`);
+                return interaction.reply({ embeds: [alreadyExistsEmbed], ephemeral: true });
+              }
+            } else {
+              const invalidTypeEmbed = new EmbedBuilder()
+                .setColor('Red')
+                .setTitle('エラー')
+                .setDescription('無効なタイプが指定されました。`user` または `server` を選択してください。');
+              return interaction.reply({ embeds: [invalidTypeEmbed], ephemeral: true });
+            }
+          
+            // 変更を保存
+            fs.writeFileSync(blacklistFilePath, JSON.stringify(blacklistData, null, 2));
+          
+            // 成功メッセージ
+            const successEmbed = new EmbedBuilder()
+              .setColor('Green')
+              .setTitle('ブラックリスト登録成功')
+              .setDescription(
+                type === 'user'
+                  ? `ユーザーID \`${id}\` をブラックリストに登録しました。`
+                  : `サーバーID \`${id}\` をブラックリストに登録しました。`
+              );
+            await interaction.reply({ embeds: [successEmbed] });
+          
+          } catch (error) {
+            console.error(error);
+          
+            // エラーメッセージ
             const errorEmbed = new EmbedBuilder()
               .setColor('Red')
               .setTitle('エラー')
-              .setDescription(`コマンド "${commandName}" が見つかりません。`);
+              .setDescription('ブラックリストの更新中にエラーが発生しました。');
             return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
           }
-
-          // コマンドのキャッシュをクリア
-          delete require.cache[require.resolve(commandPath)];
-
-          try {
-            const newCommand = require(commandPath);
-            interaction.client.commands.set(newCommand.data.name, newCommand);
-
-            const successReloadEmbed = new EmbedBuilder()
-              .setColor('Green')
-              .setTitle('コマンドリロード成功')
-              .setDescription(`コマンド "${commandName}" を正常にリロードしました。`);
-            await interaction.reply({ embeds: [successReloadEmbed] });
-          } catch (error) {
-            console.error(error);
-            const errorEmbed = new EmbedBuilder()
-              .setColor('Red')
-              .setTitle('リロードエラー')
-              .setDescription(`コマンド "${commandName}" のリロード中にエラーが発生しました。`);
-            await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
-          }
           break;
+        
+        case 'reload':
+  const commandName = interaction.options.getString('command_name');
+  const commandPath = path.resolve(__dirname, `${commandName}.js`);
+
+  // 指定されたコマンドが存在するか確認
+  if (!fs.existsSync(commandPath)) {
+    const errorEmbed = new EmbedBuilder()
+      .setColor('Red')
+      .setTitle('エラー')
+      .setDescription(`コマンド "${commandName}" が見つかりません`);
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  try {
+    // コマンドのキャッシュをクリア
+    delete require.cache[require.resolve(commandPath)];
+
+    // 新しいコマンドを読み込み
+    const newCommand = require(commandPath);
+
+    if (!newCommand.data || !newCommand.execute) {
+      const invalidCommandEmbed = new EmbedBuilder()
+        .setColor('Red')
+        .setTitle('エラー')
+        .setDescription(`コマンド "${commandName}" は有効なスラッシュコマンドではありません。`);
+      return interaction.reply({ embeds: [invalidCommandEmbed], ephemeral: true });
+    }
+
+    // コマンドを更新
+    interaction.client.commands.set(newCommand.data.name, newCommand);
+
+    const successReloadEmbed = new EmbedBuilder()
+      .setColor('Green')
+      .setTitle('コマンドリロード成功')
+      .setDescription(`コマンド "${commandName}" を正常にリロードしました。`);
+    await interaction.reply({ embeds: [successReloadEmbed] });
+  } catch (error) {
+    console.error(`リロード中にエラーが発生しました: ${error.message}`);
+
+    const errorEmbed = new EmbedBuilder()
+      .setColor('Red')
+      .setTitle('リロードエラー')
+      .setDescription(`コマンド "${commandName}" のリロード中にエラーが発生しました。`);
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+  break;
+
 
         default:
           break;

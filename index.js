@@ -29,6 +29,19 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
+// コマンド再登録関数
+async function registerCommands() {
+  const rest = new REST({ version: '10' }).setToken(token);
+
+  try {
+    console.log('グローバルコマンドを再登録中...');
+    const commands = client.commands.map(command => command.data.toJSON());
+    await rest.put(Routes.applicationCommands(clientId), { body: commands });
+    console.log('グローバルコマンドの再登録が完了しました！');
+  } catch (error) {
+    console.error('エラー: グローバルコマンド再登録中に問題が発生しました', error);
+  }
+}
 
 // ボットが準備完了したときの処理
 client.once('ready', async () => {
@@ -56,19 +69,8 @@ client.once('ready', async () => {
     }
   }, 5000);
 
-  // コマンドの登録処理
-  const rest = new REST({ version: '10' }).setToken(token);
-
-  try {
-    console.log('開始: グローバルコマンドを登録中...');
-
-    const commands = client.commands.map(command => command.data.toJSON());
-    await rest.put(Routes.applicationCommands(clientId), { body: commands });
-
-    console.log('成功: グローバルコマンドが登録されました');
-  } catch (error) {
-    console.error('エラー: コマンド登録中に問題が発生しました', error);
-  }
+  // 初回のコマンド登録
+  await registerCommands();
 });
 
 // コマンド実行時の処理
@@ -76,7 +78,7 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
   // ブラックリストチェック
-  if (blacklist.users.includes(interaction.user.id)) {
+  if (blacklist.bannedUsers.includes(interaction.user.id)) {
     await interaction.reply({
       content: 'あなたはこのボットの使用を禁止されています。もしサポートが必要な場合サポートサーバーにお越しください。',
       ephemeral: true,
@@ -84,7 +86,7 @@ client.on('interactionCreate', async interaction => {
     return; // ここで処理を終了
   }
 
-  if (blacklist.servers.includes(interaction.guildId)) {
+  if (blacklist.bannedServers.includes(interaction.guild.id)) {
     await interaction.reply({
       content: 'このサーバーはこのボットの使用を禁止されています。サーバーの管理者はもしサポートが必要な場合サポートサーバーにお越しください。',
       ephemeral: true,
@@ -97,20 +99,17 @@ client.on('interactionCreate', async interaction => {
     return interaction.reply({ content: '不明なコマンドです。', ephemeral: true });
   }
 
-  for (const file of commandFiles) {
-    const commandPath = `./commands/${file}`;
+  // 再登録トリガー (例: /reload-commands)
+  if (interaction.commandName === 'reload-commands') {
     try {
-      const command = require(commandPath);
-  
-      if (!command.data || !command.data.name || typeof command.execute !== 'function') {
-        console.error(`コマンドファイル「${file}」は正しい形式ではありません。スキップします。`);
-        continue;
-      }
-  
-      client.commands.set(command.data.name, command);
+      await interaction.reply('グローバルコマンドを再登録中...');
+      await registerCommands();
+      await interaction.editReply('グローバルコマンドの再登録が完了しました！');
     } catch (error) {
-      console.error(`コマンドファイル「${file}」の読み込み中にエラーが発生しました:`, error);
+      console.error('エラー: コマンド再登録中に問題が発生しました', error);
+      await interaction.editReply('コマンドの再登録に失敗しました。もう一度お試しください。');
     }
+    return; // 他の処理をスキップ
   }
 
   try {
@@ -126,4 +125,3 @@ client.on('interactionCreate', async interaction => {
 
 // ボットを Discord にログイン
 client.login(token);
-
