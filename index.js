@@ -3,9 +3,13 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { clientId, token } = require('./json/config.json');
 const fs = require('fs');
-
-// Discord.js クライアント作成
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ],
+});
 client.commands = new Collection();
 
 // コマンドファイルの読み込み
@@ -71,6 +75,51 @@ client.once('ready', async () => {
 
   // 初回のコマンド登録
   await registerCommands();
+});
+
+// ユーザーのメッセージ送信履歴を追跡するマップ
+const userMessages = new Map();
+
+client.on('messageCreate', async (message) => {
+  // ボットやシステムメッセージを無視
+  if (message.author.bot) return;
+
+  const userId = message.author.id;
+  const now = Date.now();
+
+  // メッセージ履歴を記録
+  if (!userMessages.has(userId)) {
+    userMessages.set(userId, []);
+  }
+  const timestamps = userMessages.get(userId);
+  timestamps.push(now);
+
+  // 5秒以上前のメッセージは削除
+  userMessages.set(userId, timestamps.filter((timestamp) => now - timestamp <= 5000));
+
+  // 5秒以内に3回以上送信した場合
+  if (timestamps.length >= 3) {
+    try {
+      // タイムアウト（TO）
+      const member = await message.guild.members.fetch(userId);
+      await member.timeout(10 * 60 * 1000, '5秒以内に3回以上メッセージ送信'); // 10分間のTO
+
+      // 最近のメッセージを削除
+      const messages = await message.channel.messages.fetch({ limit: 100 });
+      const userMessagesToDelete = messages.filter((msg) => msg.author.id === userId).first(99);
+      await message.channel.bulkDelete(userMessagesToDelete, true);
+
+      // 通知
+      await message.channel.send({
+        content: `<@${userId}> がスパム行為でタイムアウトされました。最近のメッセージを削除しました。`,
+      });
+    } catch (error) {
+      console.error('エラーが発生しました:', error);
+    }
+
+    // ユーザーの履歴をクリア
+    userMessages.delete(userId);
+  }
 });
 
 // コマンド実行時の処理
