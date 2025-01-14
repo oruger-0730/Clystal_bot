@@ -95,7 +95,7 @@ client.on('messageCreate', async (message) => {
   timestamps.push(now);
 
   // 5秒以上前のメッセージは削除
-  userMessages.set(userId, timestamps.filter((timestamp) => now - timestamp <= 5000));
+  userMessages.set(userId, timestamps.filter((timestamp) => now - timestamp <= 4000));
 
   // 5秒以内に3回以上送信した場合
   if (timestamps.length >= 3) {
