@@ -16,7 +16,7 @@ module.exports = {
         )
         .addStringOption(option =>
             option.setName('color')
-                .setDescription('埋め込みメッセージの色（例: RED, BLUE, GREEN または #FF0000）')
+                .setDescription('埋め込みメッセージの色（例: RED, Blue, Green または #FF0000）')
                 .setRequired(false)
         ),
     async execute(interaction) {
@@ -28,12 +28,13 @@ module.exports = {
 
             // 色を処理
             let embedColor;
-            if (colorInput.startsWith('#')) {
+            if (/^#[0-9A-Fa-f]{6}$/.test(colorInput)) {
                 // 16進数カラーコードの場合
                 embedColor = colorInput;
             } else {
-                // `Colors` 定数に変換可能かチェック
-                embedColor = Colors[colorInput.toUpperCase()] || Colors.Blue;
+                // Colors 定数に含まれるキーを柔軟に比較
+                const colorKey = Object.keys(Colors).find(key => key.toLowerCase() === colorInput.trim().toLowerCase());
+                embedColor = Colors[colorKey] || Colors.Blue;
             }
 
             // 埋め込みメッセージを作成
@@ -51,4 +52,3 @@ module.exports = {
         }
     },
 };
-
