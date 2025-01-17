@@ -12,8 +12,8 @@ module.exports = {
     .setDescription('農場関連のコマンドです。')
     .addSubcommand(subcommand =>
       subcommand
-        .setName('work')
-        .setDescription('仕事をして米の種を得ます！')
+        .setName('seedsget')
+        .setDescription('米の種を得ます！')
     )
     .addSubcommand(subcommand =>
       subcommand
@@ -55,8 +55,8 @@ module.exports = {
   async execute(interaction) {
     const subcommand = interaction.options.getSubcommand();
 
-    if (subcommand === 'work') {
-      await this.work(interaction);
+    if (subcommand === 'seedsget') {
+      await this.seedsget(interaction);
     } else if (subcommand === 'plant') {
       await this.plant(interaction);
     } else if (subcommand === 'harvest') {
@@ -334,7 +334,7 @@ module.exports = {
     }
   },
 
-  async work(interaction) {
+  async seedsget(interaction) {
     const userId = interaction.user.id;
 
     // データの読み込み
