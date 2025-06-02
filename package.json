@@ -33,8 +33,4 @@
   "engines": {
     "node": "16.x"
   },
-  "keywords": [
-    "node",
-    "glitch"
-  ]
 }
