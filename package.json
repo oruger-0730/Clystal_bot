@@ -1,7 +1,7 @@
 {
-  "name": "TestBot",
+  "name": "Clystal_Bot",
   "version": "0.0.1",
-  "description": "動画用",
+  "description": "Clystal_Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
