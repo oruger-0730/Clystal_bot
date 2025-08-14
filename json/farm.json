@@ -1,0 +1,47 @@
+{
+  "1275233053601435703": {
+    "farmLevel": 1009999999999999,
+    "plantedSeeds": 0,
+    "nextHarvestTime": 0,
+    "plantedKind": "にんじん",
+    "lastRicePriceChange": 1750494030770,
+    "lastCarrotPriceChange": 1751287342093,
+    "lastCornPriceChange": 0
+  },
+  "1258733927888195715": {
+    "farmLevel": 1,
+    "plantedSeeds": 10,
+    "nextHarvestTime": 1750338455848,
+    "plantedKind": "にんじん",
+    "lastRicePriceChange": 1750336665070,
+    "lastCarrotPriceChange": 1749017792608,
+    "lastCornPriceChange": 1749196710977
+  },
+  "1354325069685461078": {
+    "farmLevel": 1010000000000000000,
+    "plantedSeeds": 0,
+    "nextHarvestTime": 0,
+    "lastRicePriceChange": 1749283630773,
+    "lastCarrotPriceChange": 1751975666238,
+    "lastCornPriceChange": 0,
+    "plantedKind": "にんじん"
+  },
+  "1195288310189404251": {
+    "farmLevel": 1,
+    "plantedSeeds": 0,
+    "nextHarvestTime": 0,
+    "plantedKind": "米",
+    "lastRicePriceChange": 0,
+    "lastCarrotPriceChange": 0,
+    "lastCornPriceChange": 0
+  },
+  "1342454247916175360": {
+    "farmLevel": 101000000000000000,
+    "plantedSeeds": 0,
+    "nextHarvestTime": 0,
+    "plantedKind": "にんじん",
+    "lastRicePriceChange": 1750678875119,
+    "lastCarrotPriceChange": 1751981831883,
+    "lastCornPriceChange": 0
+  }
+}
