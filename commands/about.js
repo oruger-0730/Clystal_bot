@@ -15,6 +15,7 @@ module.exports = {
           { name: '作者', value: 'Oruger', inline: true },
           { name: '公式ホームページ', value: '[公式ホームページはこちら](https://oruger-0730.github.io/clystal_bot-home-page/)', inline: false },
           { name: 'サポート', value: '[サポートサーバーに参加](https://discord.gg/Kn47Ktqe9w)', inline: false },
+          { name: '後援', value: '[後援のサーバーへ参加](https://discord.gg/7Y2aaxbbgx)'},
         )
         .setFooter({ text: 'Clystal Bot | Powered by Discord.js', iconURL: 'https://i.imgur.com/AfFp7pu.png' })
         .setTimestamp();
